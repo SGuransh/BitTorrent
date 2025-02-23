@@ -33,10 +33,13 @@ func (s *Server) acceptLoop() {
 			fmt.Println("Failed to accept connection: ", err)
 			continue
 		}
+
+		go s.readLoop(conn)
 	}
 }
 
 func (s *Server) readLoop(conn net.Conn) {
+	defer conn.Close()
 	buf := make([]byte, 1024)
 	for {
 		n, err := conn.Read(buf)
@@ -44,6 +47,9 @@ func (s *Server) readLoop(conn net.Conn) {
 			fmt.Println("Failed to read from connection: ", err)
 			return
 		}
+
+		msg := buf[:n]
+		fmt.Println("Received message: ", string(msg))
 	}
 }
 
