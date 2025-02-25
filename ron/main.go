@@ -1,6 +1,10 @@
 package main
 
-import "net"
+import (
+	"fmt"
+	"net"
+	"log"
+)
 
 type Server struct {
 	listenAddr string
@@ -16,8 +20,8 @@ func NewServer(listenAddr string) *Server {
 }
 
 func (s *Server) Start() error {
-	ln, err := net.Listen("tpc", s.listenAddr)
-	"""
+	ln, err := net.Listen("tcp", s.listenAddr)
+	/*
 	net.Listen() creates a network listener (AKA server) and you
 	can respond to incoming requests with acceptLoop below.
 
@@ -25,33 +29,37 @@ func (s *Server) Start() error {
 	1. OS binds given address and port
 	2. Program listens for incoming requests
 	3. Once a client connects, you can accept using ln.Accept()
-	"""
+	*/
 	if err != nil {
 		return err
 	}
 	defer ln.Close()
 	s.ln = ln
 
+	go s.acceptLoop()  // go keyword used to start thread routine
+
 	<-s.quitch  // Blocks here until quitch is closed
-	"""
+	/*
 	Understanding <-s.quitch
 	s.quitch is a channel of type chan struct{}.
 	<-s.quitch means 'receive from the channel'.
 	Since quitch is an unbuffered channel, the operation will block until:
 	1. A value is sent to s.quitch → s.quitch <- struct{}{}.
 	2. The channel is closed → close(s.quitch).
-	"""
+	*/
 
 	return nil
 }
 
 func (s *Server) acceptLoop() {
 	for {
-		conn, err := s.ln.Acccept()
+		conn, err := s.ln.Accept()
 		if err != nil {
 			fmt.Println("accept error:", err)
 			continue
 		}
+
+		fmt.Println("new connection:", conn.RemoteAddr())
 
 		go s.readLoop(conn)  // go keyword used to start thread routine - Multithreading
 	}
@@ -73,4 +81,6 @@ func (s *Server) readLoop(conn net.Conn) {
 }
 
 func main() {
+	server := NewServer(":3000")
+	log.Fatal(server.Start())
 }
