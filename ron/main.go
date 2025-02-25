@@ -10,12 +10,18 @@ type Server struct {
 	listenAddr string
 	ln 		   net.Listener
 	quitch     chan struct{}
+	msgch	   chan []byte
 }
 
 func NewServer(listenAddr string) *Server {
 	return &Server {
 		listenAddr: listenAddr,
 		quitch: 	make(chan struct{}),
+		msgch:      make(chan []byte, 10),
+		/*
+		Channels allow goroutines to communicate with each other.
+		Here, we create a channel of type []byte with a buffer size of 10.
+		*/
 	}
 }
 
@@ -77,6 +83,8 @@ func (s *Server) readLoop(conn net.Conn) {
 
 		msg := buf[:n]
 		fmt.Println(string(msg))
+
+		s.msgch <- buf[:n]
 	}
 }
 
