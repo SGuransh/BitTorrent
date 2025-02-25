@@ -1,5 +1,7 @@
 package main
 import "net"
+import "fmt"
+import "log"
 
 type Server struct {
 	listenAddr string
@@ -9,11 +11,12 @@ type Server struct {
 
 func NewServer(listenAddr string) *Server {
 	return &Server{
-		listenAddr: listenAddr
+		listenAddr: listenAddr,
+		quitch: make(chan struct{}),
 	}
 }
 
-func (s *Server) ListenAndServe() error {
+func (s *Server) Start() error {
 	ln, err := net.Listen("tcp", s.listenAddr)
 	if err != nil {
 		return err
@@ -21,12 +24,15 @@ func (s *Server) ListenAndServe() error {
 	defer ln.Close()
 	s.ln = ln
 
+	go s.acceptLoop()
+
 	<-s.quitch
 
 	return nil
 }
 
 func (s *Server) acceptLoop() {
+	fmt.Println("Listening on: ", s.listenAddr)
 	for {
 		conn, err := s.ln.Accept()
 		if err != nil {
@@ -34,18 +40,20 @@ func (s *Server) acceptLoop() {
 			continue
 		}
 
+		fmt.Println("Accepted connection from: ", conn.RemoteAddr())
+
 		go s.readLoop(conn)
 	}
 }
 
 func (s *Server) readLoop(conn net.Conn) {
 	defer conn.Close()
-	buf := make([]byte, 1024)
+	buf := make([]byte, 2048)
 	for {
 		n, err := conn.Read(buf)
 		if err != nil {
 			fmt.Println("Failed to read from connection: ", err)
-			return
+			continue
 		}
 
 		msg := buf[:n]
@@ -54,5 +62,6 @@ func (s *Server) readLoop(conn net.Conn) {
 }
 
 func main() {
-	println("Hello, World!")
+	server := NewServer(":3000")
+	log.Fatal(server.Start())
 }
