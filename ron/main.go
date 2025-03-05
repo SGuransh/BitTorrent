@@ -1,3 +1,10 @@
+/*
+"go run main.go" to run the server
+
+On the other terminal, run "nc localhost 3000" to connect to the server.
+You can type messages and hit enter to send them to the server.
+*/
+
 package main
 
 import (
