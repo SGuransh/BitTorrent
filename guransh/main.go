@@ -59,20 +59,41 @@ func (s *Server) acceptLoop() {
 
 func (s *Server) readLoop(conn net.Conn) {
 	defer conn.Close()
-	buf := make([]byte, 2048)
+	var message []byte // To accumulate characters
+
 	for {
+		buf := make([]byte, 1) // Read one byte at a time
 		n, err := conn.Read(buf)
 		if err != nil {
+			if err.Error() == "EOF" {
+				// EOF error is expected when the client disconnects
+				fmt.Println("Connection closed by client: ", conn.RemoteAddr())
+				break
+			}
 			fmt.Println("Failed to read from connection: ", err)
 			continue
 		}
 
-		s.msgch <- Message{
-			from:    conn.RemoteAddr().String(),
-			payload: buf[:n],
-		}
+		// Append the character to the message buffer
+		message = append(message, buf[:n]...)
 
-		conn.Write([]byte("Message received\n"))
+		// Check for CRLF (\r\n) to signal the end of the message
+		if len(message) >= 2 && message[len(message)-2] == '\r' && message[len(message)-1] == '\n' {
+			// Remove the \r\n from the message to process the actual message
+			message = message[:len(message)-2]
+
+			// Send the full message to the msgch channel
+			s.msgch <- Message{
+				from:    conn.RemoteAddr().String(),
+				payload: message,
+			}
+
+			// Respond back to the client immediately
+			conn.Write([]byte("Message received\r\n"))
+
+			// Reset the message buffer for the next input
+			message = nil
+		}
 	}
 }
 
